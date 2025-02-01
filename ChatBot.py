@@ -361,9 +361,9 @@ with st.sidebar:
     # 通用参数
     col1, col2 = st.columns(2)
     with col1:
-        temperature = st.slider("创意度", 0.0, 1.0, 0.7, 0.1)
+        temperature = st.slider("创意度", 0.0, 1.0, 0.5, 0.1)
     with col2:
-        max_tokens = st.slider("响应长度", 100, 4096, 1024, 100)
+        max_tokens = st.slider("响应长度", 100, 4094, 2048, 100)
 
     # API 测试功能
     st.subheader("API 测试")
