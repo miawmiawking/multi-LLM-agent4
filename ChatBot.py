@@ -180,7 +180,7 @@ def call_model_api(prompt, model_type, uploaded_file=None):
                         "temperature": temperature,
                         "max_tokens": max_tokens
                     },
-                    headers=headers
+                    headers={"Authorization": f"Bearer {st.session_state.api_keys['OpenAI']}"}
                 )
                 response_json = response.json()
                 if "error" in response_json:
@@ -214,15 +214,32 @@ def call_model_api(prompt, model_type, uploaded_file=None):
                 st.error(f"DALL-E API 返回格式异常: {response_json}")
                 return None
 
+        elif model_type == "moonshot-v1-8k-vision-preview":
+            headers["Authorization"] = f"Bearer {st.session_state.api_keys['Kimi(视觉理解)']}"
+            # 将图片内容转换为Base64编码
+            encoded_string = base64.b64encode(prompt).decode("utf-8")
+            response = requests.post(
+                "https://api.moonshot.cn/v1/chat/completions",
+                json={
+                    "model": "moonshot-v1-8k-vision-preview",
+                    "messages": [
+                        {"role": "user", "content": [{"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{encoded_string}"}}]}
+                    ],
+                    "temperature": temperature,
+                    "max_tokens": max_tokens
+                },
+                headers=headers
+            )
+            return response.json()["choices"][0]["message"]["content"]
+
         elif model_type == "o1(深度推理)":
             headers["Authorization"] = f"Bearer {st.session_state.api_keys['OpenAI']}"
             response = requests.post(
                 "https://api.openai.com/v1/chat/completions",
                 json={
-                    "model": "o1-preview",
+                    "model": "o1-mini",
                     "messages": [{"role": "user", "content": prompt}],
-                    "temperature": 1.0,
-                    "max_completion_tokens": max_tokens  # 替换为正确的参数
+                    "max_completion_tokens": max_tokens  # 保留 max_completion_tokens 参数
                 },
                 headers=headers
             )
@@ -271,7 +288,7 @@ def perform_visual_analysis(image_content):
     """使用 moonshot-v1-8k-vision-preview 模型进行视觉分析"""
     try:
         # 调用 moonshot-v1-8k-vision-preview 模型进行视觉分析
-        headers = {"Content-Type": "application/json", "Authorization": f"Bearer {st.session_state.api_keys['Kimi']}"}
+        headers = {"Content-Type": "application/json", "Authorization": f"Bearer {st.session_state.api_keys['Kimi(视觉理解)']}"}
         # 将图片内容转换为Base64编码
         encoded_string = base64.b64encode(image_content).decode("utf-8")
         response = requests.post(
@@ -325,15 +342,16 @@ with st.sidebar:
     # 模型选择
     model_options = {
         "豆包": ["ep-20250128163906-p4tb5"],
+
         "DeepSeek": ["deepseek-chat", "deepseek-reasoner"],
         "通义千问": ["qwen-plus"],
         "文心一言": ["ERNIE-Bot"],
         "智谱清言": ["glm-4"],
         "MiniMax": ["abab5.5-chat"],
         "DALL-E(文生图)": ["dall-e-3"],
-        "o1(深度推理)": ["o1-preview"],
+        "o1(深度推理)": ["o1-mini"],
         "Kimi(视觉理解)": ["moonshot-v1-8k", "moonshot-v1-8k-vision-preview"],
-        "GPTs(聊天、语音识别)": ["gpt-4"]
+        "GPTs(聊天、语音识别)": ["gpt-4o"]
     }
 
     st.session_state.selected_model = st.selectbox(
@@ -363,7 +381,7 @@ with st.sidebar:
     with col1:
         temperature = st.slider("创意度", 0.0, 1.0, 0.5, 0.1)
     with col2:
-        max_tokens = st.slider("响应长度", 100, 4094, 2048, 100)
+        max_tokens = st.slider("响应长度", 100, 4096, 2048, 100)
 
     # API 测试功能
     st.subheader("API 测试")
@@ -501,7 +519,7 @@ if user_input:
     with st.spinner("🧠 正在处理请求..."):
         # 根据功能路由处理
         if st.session_state.selected_function == "文生图":
-            image_url = call_model_api(full_prompt, "DALL-E")
+            image_url = call_model_api(full_prompt, "DALL-E(文生图)")
             st.image(image_url, caption="生成结果")
 
         elif st.session_state.selected_function == "视觉理解":
@@ -543,3 +561,5 @@ for msg in st.session_state.messages:
 if not st.session_state.messages:
     with st.chat_message("assistant"):
         st.write("您好！我是多模型智能助手，请选择模型和功能开始交互。")
+
+
